@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import { Bell, LogOut, Layout, User, X } from 'lucide-react';
+import { Bell, LogOut, Layout, User, X, Settings } from 'lucide-react';
 import NotificationsDrawer from './NotificationsDrawer';
+import SettingsModal, { playChime } from './SettingsModal';
 
 export default function Navbar() {
   const { user, logout, apiFetch } = useAuth();
@@ -10,6 +11,21 @@ export default function Navbar() {
   const [notifsOpen, setNotifsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [toasts, setToasts] = useState([]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState(() => {
+    const saved = localStorage.getItem('aetheria_notif_settings');
+    return saved ? JSON.parse(saved) : {
+      soundEnabled: true,
+      soundOnAssignment: true,
+      soundOnComment: true,
+      soundOnSystem: true
+    };
+  });
+
+  const handleSaveSettings = (newSettings) => {
+    setSettings(newSettings);
+    localStorage.setItem('aetheria_notif_settings', JSON.stringify(newSettings));
+  };
 
   // Fetch notifications
   useEffect(() => {
@@ -40,6 +56,18 @@ export default function Navbar() {
       const id = Math.random().toString();
       setToasts(prev => [...prev, { id, message: newNotif.message }]);
       
+      // Play synthetic glassy chime based on user alert preferences
+      if (settings.soundEnabled) {
+        const notifType = newNotif.type;
+        if (notifType === 'assignment' && settings.soundOnAssignment) {
+          playChime();
+        } else if (notifType === 'comment' && settings.soundOnComment) {
+          playChime();
+        } else if ((notifType === 'update' || notifType === 'info') && settings.soundOnSystem) {
+          playChime();
+        }
+      }
+
       // Auto dismiss toast after 6 seconds
       setTimeout(() => {
         setToasts(prev => prev.filter(t => t.id !== id));
@@ -47,7 +75,7 @@ export default function Navbar() {
     });
 
     return () => removeListener();
-  }, [addListener]);
+  }, [addListener, settings]);
 
   const handleMarkAllRead = async () => {
     try {
@@ -126,6 +154,7 @@ export default function Navbar() {
             onClick={() => setNotifsOpen(!notifsOpen)}
             className="btn btn-secondary btn-icon"
             style={{ position: 'relative', overflow: 'visible' }}
+            title="Workspace Notifications"
           >
             <Bell size={18} />
             {unreadCount > 0 && (
@@ -151,6 +180,15 @@ export default function Navbar() {
             )}
           </button>
 
+          {/* Control Center Settings */}
+          <button 
+            onClick={() => setSettingsOpen(true)}
+            className="btn btn-secondary btn-icon"
+            title="Workspace Control Center"
+          >
+            <Settings size={18} />
+          </button>
+
           {/* User Profile */}
           {user && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -158,7 +196,7 @@ export default function Navbar() {
                 <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{user.username}</span>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{user.email}</span>
               </div>
-              <div className="avatar">
+              <div className="avatar" style={{ cursor: 'pointer' }} onClick={() => setSettingsOpen(true)} title="View Account Details">
                 {getInitials(user.username)}
               </div>
             </div>
@@ -178,6 +216,14 @@ export default function Navbar() {
         notifications={notifications}
         onMarkRead={handleMarkRead}
         onMarkAllRead={handleMarkAllRead}
+      />
+
+      {/* Workspace Settings / Account Control Center Modal */}
+      <SettingsModal 
+        open={settingsOpen} 
+        onClose={() => setSettingsOpen(false)}
+        settings={settings}
+        onSave={handleSaveSettings}
       />
 
       {/* Floating Toast Area */}

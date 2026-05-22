@@ -99,6 +99,16 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const updateUserContext = (newUser, newToken) => {
+    if (newToken) {
+      localStorage.setItem('aetheria_token', newToken);
+      setToken(newToken);
+    }
+    if (newUser) {
+      setUser(newUser);
+    }
+  };
+
   const value = {
     user,
     token,
@@ -107,6 +117,7 @@ export function AuthProvider({ children }) {
     login,
     register,
     logout,
+    updateUserContext,
     apiFetch: async (endpoint, options = {}) => {
       const headers = {
         'Content-Type': 'application/json',

@@ -97,6 +97,13 @@ export const db = {
       dbData.users.push(newUser);
       await saveDB();
       return newUser;
+    },
+    update: async (id, updateData) => {
+      const idx = dbData.users.findIndex(u => u.id === id);
+      if (idx === -1) return null;
+      dbData.users[idx] = { ...dbData.users[idx], ...updateData };
+      await saveDB();
+      return dbData.users[idx];
     }
   },
 
